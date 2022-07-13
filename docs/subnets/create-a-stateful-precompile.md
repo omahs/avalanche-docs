@@ -18,19 +18,56 @@ cd subnet-evm
 
 Now that we've cloned `subnet-evm`, you should open it in your editor of choice and we'll get started implementing our "Hello World" application.
 
-## Implementing the Stateful Precompile
+## Solidity Interface
 
-Now it's time to implement the Stateful Precompile.
+Now it's time to implement the Stateful Precompile. To start out, let's define the Solidity interface that we want the precompile to implement.
 
-1. Add new address for the Stateful Precompile
-2. Create a new file to implement it in and create the config
+For HelloWorld, we will implement two functions `sayHello()` and `setRecipient(string calldata recipient)`.
 
-We'll start by creating a new file called in the precompile directory at `precompile/hello_world.go`.
+`sayHello` will simply return a "Hello ..." string to the caller and `setRecipient` will set the latter half of the string returned by `sayHello`.
+
+Once we've implemented the Solidity interface, it's time to set up the contract itself.
+
+## Precompile Implementation
 
 
+1. Add new address for the Stateful Precompile to `precompile/params.go` and add it to `usedAddresses`.
+2. Create a new file called `precompile/hello_world.go`.
+3. Implement the full config and contract interface with methods to fill in and type checks so everything passes
+4. Implement the actual BlockTimestamp, Address, and Contract functions to return the singleton contract (note: singleton should be safe to call concurrently)
+5. Implement the Configure function to set up the address space of the precompile - this will set the original recipient in the state
+6. Implement packer/unpacker functions, create the function selectors as vars at the top of the file, and two functions sayHello and setRecipient to perform the actual functionality following the interface
+7. Implement `createHelloWorldPrecompile` which simply wraps these two functions together into one contract
+8. Update the config to return the actual contract
 
-## Updating the Chain Config to Activate Stateful Precompile
+## Adding the Precompile to the Chain Config
+
+1. Add `precompile.HelloWorldConfig` to `params/config.go` in the same way as for the others
+2. Add to String() function
+3. Add `IsHelloWorld` function
+4. Add to `checkCompatible` to ensure that we do not allow invalid upgrades
+5. Add to `rules` type
+6. Add to `AvalancheRules`
+7. Add to `enabledStatefulPrecompiles()` so that it will be activated correctly
 
 ## Writing Stateful Precompile Unit Tests
 
-## Calling the Stateful Precompile from Remix
+Follow the same style in `core/stateful_precompile_test.go` to add unit tests:
+
+- set recipient read only
+- set recipient no read only
+- sayHello normal
+- sayHello after setting the recipient
+
+Note: we should mention that we can also add tests in `plugin/evm/vm_test.go` or `core/blockchain_test.go` if the precompile is intended to modify the behavior of the VM beyond just the state transition it performs ex. TxAllowList blocks addresses from issuing transactions, so this changes the behavior of `core/tx_pool.go` and `core/state_transition.go`.
+
+## Add HardHat Tests
+
+Add HardHat tasks to e2e tests to show how it can be used from HardHat
+
+## Use from Remix
+
+Example of how to use it in Remix
+## Call Directly in a Transaction
+
+Example of how to call it directly from a transaction without going through a smart contract
